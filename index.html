@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>个人资产统计</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --card: #f8fafc;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 20px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 8px;
+      color: #0f172a;
+    }
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 28px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+    .card h2 {
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .rates-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      align-items: end;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      background: #fff;
+      color: var(--text);
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    button:active { transform: scale(0.98); }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary {
+      background: #e2e8f0;
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: #cbd5e1; }
+    .btn-danger {
+      background: #fee2e2;
+      color: var(--danger);
+    }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .btn-success:hover { background: #bbf7d0; }
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    th {
+      background: #f1f5f9;
+      font-weight: 600;
+      color: #475569;
+      font-size: 0.8rem;
+    }
+    tr:hover td { background: #f8fafc; }
+    .total-box {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #eff6ff, #f0f9ff);
+      border: 1px solid #bfdbfe;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    .total-box .label { color: var(--muted); font-size: 0.95rem; }
+    .total-box .value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #1d4ed8;
+    }
+    .chart-container {
+      position: relative;
+      height: 320px;
+      max-width: 480px;
+      margin: 0 auto 20px;
+    }
+    .percent-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 8px;
+    }
+    .percent-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .actions-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .actions-bar button, .actions-bar label.btn-secondary {
+      flex: 1 1 auto;
+      min-width: 120px;
+      text-align: center;
+      justify-content: center;
+    }
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 40px 20px;
+    }
+    .mode-toggle {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 20px;
+      margin-bottom: 16px;
+    }
+    .mode-toggle > label {
+      display: inline-flex !important;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      color: var(--text);
+      white-space: nowrap;
+      padding: 6px 0;
+      margin-bottom: 0;
+    }
+    .mode-toggle input[type="radio"] {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      margin: 0;
+      accent-color: var(--primary);
+    }
+    .hidden { display: none !important; }
+    .currency-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+    .note {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+    @media (max-width: 640px) {
+      body { padding: 12px; }
+      .card { padding: 16px; }
+      .rates-grid {
+        grid-template-columns: 1fr;
+      }
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+      .mode-toggle {
+        flex-direction: column;
+        gap: 10px;
+      }
+      .mode-toggle > label {
+        white-space: normal;
+        line-height: 1.4;
+      }
+      table { font-size: 0.8rem; }
+      th, td { padding: 8px 6px; }
+      .total-box .value { font-size: 1.3rem; }
+      .chart-container { height: 280px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>个人资产统计</h1>
+  <p class="subtitle">本地运行 · 数据保存在浏览器 · 可导出/导入 · 支持 GitHub Pages 部署</p>
+
+  <!-- 汇率设置 -->
+  <div class="card">
+    <h2>💱 汇率设置（转换为人民币）</h2>
+    <div class="rates-grid">
+      <div>
+        <label for="rateUSD">1 美元 (USD) = 人民币 (CNY)</label>
+        <input type="number" id="rateUSD" step="0.0001" min="0" value="6.70" placeholder="例如 6.70">
+      </div>
+      <div>
+        <label for="rateHKD">1 港币 (HKD) = 人民币 (CNY)</label>
+        <input type="number" id="rateHKD" step="0.0001" min="0" value="0.855" placeholder="例如 0.855">
+      </div>
+      <div>
+        <button class="btn-primary" onclick="saveRates()">保存汇率</button>
+      </div>
+    </div>
+    <p class="note">提示：可随时修改汇率，所有以美元/港币计价的资产会自动按最新汇率折算为人民币显示。</p>
+  </div>
+
+  <!-- 添加/编辑资产 -->
+  <div class="card">
+    <h2 id="formTitle">➕ 添加资产项目</h2>
+    <div class="mode-toggle">
+      <label>
+        <input type="radio" name="inputMode" value="calc" checked onchange="toggleMode()">
+        <span>按份额 × 单价计算</span>
+      </label>
+      <label>
+        <input type="radio" name="inputMode" value="total" onchange="toggleMode()">
+        <span>直接输入总价值</span>
+      </label>
+    </div>
+    <div class="form-grid">
+      <div>
+        <label for="assetName">项目名称 *</label>
+        <input type="text" id="assetName" placeholder="例如：腾讯控股 / 黄金 / 余额宝">
+      </div>
+      <div>
+        <label for="assetCategory">分类</label>
+        <select id="assetCategory">
+          <option value="股票">股票</option>
+          <option value="基金">基金</option>
+          <option value="黄金">黄金</option>
+          <option value="流动现金">流动现金</option>
+          <option value="银行理财">银行理财</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+      <div>
+        <label for="assetCurrency">货币 *</label>
+        <select id="assetCurrency">
+          <option value="CNY">人民币 (CNY)</option>
+          <option value="USD">美元 (USD)</option>
+          <option value="HKD">港币 (HKD)</option>
+        </select>
+      </div>
+      <div id="qtyGroup">
+        <label for="assetQty">份额 / 数量 / 克数 *</label>
+        <input type="number" id="assetQty" step="any" min="0" placeholder="例如：100股 / 13克">
+      </div>
+      <div id="unitGroup">
+        <label for="assetUnit">每单位价值 *</label>
+        <input type="number" id="assetUnit" step="any" min="0" placeholder="例如：黄金每克价格 / 股票股价">
+      </div>
+      <div id="totalGroup" class="hidden">
+        <label for="assetTotal">总价值 *</label>
+        <input type="number" id="assetTotal" step="any" min="0" placeholder="总价值（对应货币）">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" id="submitBtn" onclick="submitAsset()">添加项目</button>
+      <button class="btn-secondary hidden" id="cancelBtn" onclick="cancelEdit()">取消编辑</button>
+    </div>
+  </div>
+
+  <!-- 操作栏 -->
+  <div class="actions-bar">
+    <button class="btn-success" onclick="exportData()">📤 导出数据 (JSON)</button>
+    <label class="btn-secondary" style="display:inline-flex;align-items:center;cursor:pointer;">
+      📥 导入数据
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+    </label>
+    <button class="btn-danger" onclick="clearAll()">清空所有</button>
+  </div>
+
+  <!-- 总资产 -->
+  <div class="total-box">
+    <div>
+      <div class="label">总资产（折合人民币）</div>
+      <div class="value" id="grandTotal">¥ 0.00</div>
+    </div>
+    <div style="font-size:0.85rem;color:var(--muted);" id="itemCount">共 0 项</div>
+  </div>
+
+  <!-- 资产列表 -->
+  <div class="card">
+    <h2>📋 资产明细</h2>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>名称</th>
+            <th>分类</th>
+            <th>货币</th>
+            <th>份额/数量</th>
+            <th>单价</th>
+            <th>原币总价值</th>
+            <th>折合人民币</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="assetTableBody">
+        </tbody>
+      </table>
+    </div>
+    <div id="emptyMsg" class="empty hidden">暂无资产，请在上方添加项目</div>
+  </div>
+
+  <!-- 饼图 -->
+  <div class="card">
+    <h2>📊 资产占比（按人民币）</h2>
+    <div class="chart-container">
+      <canvas id="pieChart"></canvas>
+    </div>
+    <ul class="percent-list" id="percentList"></ul>
+  </div>
+
+  <script>
+    // ========== 数据与状态 ==========
+    let assets = [];
+    let rates = { USD: 6.70, HKD: 0.855 };
+    let editingId = null;
+    let pieChart = null;
+
+    const COLORS = [
+      '#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6',
+      '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1',
+      '#14b8a6', '#e11d48', '#a855f7', '#0ea5e9', '#65a30d'
+    ];
+
+    // ========== 初始化 ==========
+    function loadData() {
+      try {
+        const saved = localStorage.getItem('personalAssets');
+        if (saved) {
+          const data = JSON.parse(saved);
+          assets = data.assets || [];
+          rates = data.rates || rates;
+        }
+      } catch (e) {
+        console.warn('加载本地数据失败', e);
+      }
+      document.getElementById('rateUSD').value = rates.USD;
+      document.getElementById('rateHKD').value = rates.HKD;
+      render();
+    }
+
+    function saveData() {
+      localStorage.setItem('personalAssets', JSON.stringify({ assets, rates }));
+    }
+
+    // ========== 汇率 ==========
+    function saveRates() {
+      const usd = parseFloat(document.getElementById('rateUSD').value);
+      const hkd = parseFloat(document.getElementById('rateHKD').value);
+      if (isNaN(usd) || usd <= 0 || isNaN(hkd) || hkd <= 0) {
+        alert('请输入有效的正数汇率');
+        return;
+      }
+      rates.USD = usd;
+      rates.HKD = hkd;
+      saveData();
+      render();
+      alert('汇率已保存并重新计算');
+    }
+
+    function toCNY(amount, currency) {
+      if (currency === 'CNY') return amount;
+      if (currency === 'USD') return amount * rates.USD;
+      if (currency === 'HKD') return amount * rates.HKD;
+      return amount;
+    }
+
+    // ========== 模式切换 ==========
+    function toggleMode() {
+      const mode = document.querySelector('input[name="inputMode"]:checked').value;
+      const isCalc = mode === 'calc';
+      document.getElementById('qtyGroup').classList.toggle('hidden', !isCalc);
+      document.getElementById('unitGroup').classList.toggle('hidden', !isCalc);
+      document.getElementById('totalGroup').classList.toggle('hidden', isCalc);
+    }
+
+    // ========== 表单 ==========
+    function submitAsset() {
+      const name = document.getElementById('assetName').value.trim();
+      const category = document.getElementById('assetCategory').value;
+      const currency = document.getElementById('assetCurrency').value;
+      const mode = document.querySelector('input[name="inputMode"]:checked').value;
+
+      if (!name) {
+        alert('请填写项目名称');
+        return;
+      }
+
+      let quantity = null;
+      let unitPrice = null;
+      let totalValue = 0;
+
+      if (mode === 'calc') {
+        const qtyStr = document.getElementById('assetQty').value.trim();
+        const unitStr = document.getElementById('assetUnit').value.trim();
+        if (!qtyStr || !unitStr) {
+          alert('请填写「份额/数量/克数」和「每单位价值」两个字段');
+          return;
+        }
+        quantity = parseFloat(qtyStr);
+        unitPrice = parseFloat(unitStr);
+        if (isNaN(quantity) || quantity < 0 || isNaN(unitPrice) || unitPrice < 0) {
+          alert('份额和单价必须是有效的非负数');
+          return;
+        }
+        totalValue = quantity * unitPrice;
+      } else {
+        const totalStr = document.getElementById('assetTotal').value.trim();
+        if (!totalStr) {
+          alert('请填写「总价值」');
+          return;
+        }
+        totalValue = parseFloat(totalStr);
+        if (isNaN(totalValue) || totalValue < 0) {
+          alert('总价值必须是有效的非负数');
+          return;
+        }
+      }
+
+      const item = {
+        id: editingId || Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+        name,
+        category,
+        currency,
+        quantity: mode === 'calc' ? quantity : null,
+        unitPrice: mode === 'calc' ? unitPrice : null,
+        totalValue,
+        mode
+      };
+
+      if (editingId) {
+        const idx = assets.findIndex(a => a.id === editingId);
+        if (idx !== -1) assets[idx] = item;
+        cancelEdit();
+      } else {
+        assets.push(item);
+      }
+
+      saveData();
+      clearForm();
+      render();
+      // 简单成功提示
+      const tip = document.createElement('div');
+      tip.textContent = '✓ 已添加：' + name + '（¥' + formatNum(toCNY(totalValue, currency)) + '）';
+      tip.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:12px 24px;border-radius:8px;z-index:9999;font-size:0.95rem;box-shadow:0 4px 12px rgba(0,0,0,0.15);';
+      document.body.appendChild(tip);
+      setTimeout(() => tip.remove(), 2500);
+    }
+
+    function clearForm() {
+      document.getElementById('assetName').value = '';
+      document.getElementById('assetQty').value = '';
+      document.getElementById('assetUnit').value = '';
+      document.getElementById('assetTotal').value = '';
+      document.getElementById('assetCategory').value = '股票';
+      document.getElementById('assetCurrency').value = 'CNY';
+      document.querySelector('input[name="inputMode"][value="calc"]').checked = true;
+      toggleMode();
+    }
+
+    function editAsset(id) {
+      const item = assets.find(a => a.id === id);
+      if (!item) return;
+      editingId = id;
+      document.getElementById('formTitle').textContent = '✏️ 编辑资产项目';
+      document.getElementById('submitBtn').textContent = '保存修改';
+      document.getElementById('cancelBtn').classList.remove('hidden');
+
+      document.getElementById('assetName').value = item.name;
+      document.getElementById('assetCategory').value = item.category;
+      document.getElementById('assetCurrency').value = item.currency;
+
+      if (item.mode === 'calc' && item.quantity != null) {
+        document.querySelector('input[name="inputMode"][value="calc"]').checked = true;
+        document.getElementById('assetQty').value = item.quantity;
+        document.getElementById('assetUnit').value = item.unitPrice;
+      } else {
+        document.querySelector('input[name="inputMode"][value="total"]').checked = true;
+        document.getElementById('assetTotal').value = item.totalValue;
+      }
+      toggleMode();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelEdit() {
+      editingId = null;
+      document.getElementById('formTitle').textContent = '➕ 添加资产项目';
+      document.getElementById('submitBtn').textContent = '添加项目';
+      document.getElementById('cancelBtn').classList.add('hidden');
+      clearForm();
+    }
+
+    function deleteAsset(id) {
+      if (!confirm('确定删除该项目？')) return;
+      assets = assets.filter(a => a.id !== id);
+      if (editingId === id) cancelEdit();
+      saveData();
+      render();
+    }
+
+    // ========== 渲染 ==========
+    function render() {
+      const tbody = document.getElementById('assetTableBody');
+      const emptyMsg = document.getElementById('emptyMsg');
+      tbody.innerHTML = '';
+
+      if (assets.length === 0) {
+        emptyMsg.classList.remove('hidden');
+        document.getElementById('grandTotal').textContent = '¥ 0.00';
+        document.getElementById('itemCount').textContent = '共 0 项';
+        updateChart([]);
+        return;
+      }
+      emptyMsg.classList.add('hidden');
+
+      let grand = 0;
+      const chartData = [];
+
+      assets.forEach((item, i) => {
+        const cny = toCNY(item.totalValue, item.currency);
+        grand += cny;
+        chartData.push({ name: item.name, value: cny, color: COLORS[i % COLORS.length] });
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${escapeHtml(item.name)}</strong></td>
+          <td>${escapeHtml(item.category)}</td>
+          <td><span class="currency-tag">${item.currency}</span></td>
+          <td>${item.quantity != null ? formatNum(item.quantity) : '—'}</td>
+          <td>${item.unitPrice != null ? formatNum(item.unitPrice) : '—'}</td>
+          <td>${formatNum(item.totalValue)} ${item.currency}</td>
+          <td><strong>¥ ${formatNum(cny)}</strong></td>
+          <td>
+            <button class="btn-secondary btn-sm" onclick="editAsset('${item.id}')">编辑</button>
+            <button class="btn-danger btn-sm" onclick="deleteAsset('${item.id}')">删除</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('grandTotal').textContent = '¥ ' + formatNum(grand);
+      document.getElementById('itemCount').textContent = `共 ${assets.length} 项`;
+      updateChart(chartData, grand);
+    }
+
+    function updateChart(data, total = 0) {
+      const list = document.getElementById('percentList');
+      list.innerHTML = '';
+
+      if (pieChart) {
+        try { pieChart.destroy(); } catch (e) {}
+        pieChart = null;
+      }
+
+      if (data.length === 0 || total <= 0) {
+        list.innerHTML = '<li style="grid-column:1/-1;justify-content:center;color:var(--muted);">暂无数据</li>';
+        return;
+      }
+
+      data.forEach(d => {
+        const pct = ((d.value / total) * 100).toFixed(2);
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span class="dot" style="background:${d.color}"></span>
+          <span><strong>${escapeHtml(d.name)}</strong>：¥ ${formatNum(d.value)}（${pct}%）</span>
+        `;
+        list.appendChild(li);
+      });
+
+      // Chart.js 可能因网络无法加载，做容错处理
+      if (typeof Chart === 'undefined') {
+        const canvas = document.getElementById('pieChart');
+        if (canvas) {
+          canvas.style.display = 'none';
+          const tip = document.createElement('p');
+          tip.style.cssText = 'text-align:center;color:#64748b;font-size:0.9rem;padding:20px;';
+          tip.textContent = '饼图库加载失败（可忽略，百分比列表已显示）';
+          canvas.parentNode.appendChild(tip);
+        }
+        return;
+      }
+
+      try {
+        const ctx = document.getElementById('pieChart').getContext('2d');
+        document.getElementById('pieChart').style.display = 'block';
+        pieChart = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: data.map(d => d.name),
+            datasets: [{
+              data: data.map(d => d.value),
+              backgroundColor: data.map(d => d.color),
+              borderWidth: 2,
+              borderColor: '#fff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { padding: 16, font: { size: 12 } } },
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) {
+                    const val = ctx.raw;
+                    const pct = ((val / total) * 100).toFixed(2);
+                    return `${ctx.label}: ¥${formatNum(val)} (${pct}%)`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('图表绘制失败', err);
+      }
+    }
+
+    // ========== 导入导出 ==========
+    function exportData() {
+      const payload = {
+        version: 1,
+        exportTime: new Date().toISOString(),
+        rates,
+        assets
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `assets_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!data.assets || !Array.isArray(data.assets)) {
+            alert('文件格式不正确');
+            return;
+          }
+          if (!confirm(`将导入 ${data.assets.length} 个项目，覆盖当前数据？`)) return;
+          assets = data.assets;
+          if (data.rates) {
+            rates = data.rates;
+            document.getElementById('rateUSD').value = rates.USD;
+            document.getElementById('rateHKD').value = rates.HKD;
+          }
+          saveData();
+          cancelEdit();
+          render();
+          alert('导入成功');
+        } catch (err) {
+          alert('解析文件失败：' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    function clearAll() {
+      if (!confirm('确定清空所有资产数据？此操作不可撤销（除非已导出备份）。')) return;
+      assets = [];
+      saveData();
+      cancelEdit();
+      render();
+    }
+
+    // ========== 工具 ==========
+    function formatNum(n) {
+      if (n == null || isNaN(n)) return '—';
+      return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // 启动
+    loadData();
+  </script>
+</body>
+</html>
